@@ -1,0 +1,4 @@
+general-topics:
+  rbpconfig:
+    shortText: Edit RB+ config
+    fullText: Edit RecipeBook+ config with /rbpconfig command
