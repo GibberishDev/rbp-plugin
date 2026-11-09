@@ -2,6 +2,7 @@ package com.gibbdev.recipebookplus;
 
 import com.gibbdev.recipebookplus.commands.RBPConfigCommand;
 import com.gibbdev.recipebookplus.config.Config;
+import com.gibbdev.recipebookplus.config.ConfigClientSync;
 import com.gibbdev.recipebookplus.recipe.sync.RecipeSync;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.minecraft.server.MinecraftServer;
@@ -26,9 +27,9 @@ public final class RecipeBookPlus extends JavaPlugin {
     @Override
     public void onEnable() {
         Plugin = this;
-        saveDefaultConfig();
         getServer().getPluginManager().registerEvents(new RecipeSync(), this);
-        getServer().getPluginManager().registerEvents(new Config(), this);
+        getServer().getPluginManager().registerEvents(new ConfigClientSync(), this);
+        Config.registerConfigEntries();
         registerCommands();
         registerNetworking();
     }
@@ -53,7 +54,7 @@ public final class RecipeBookPlus extends JavaPlugin {
         messenger.registerOutgoingPluginChannel(p, "fabric:recipe_sync");
         messenger.registerOutgoingPluginChannel(p, "recipebookplus:config");
         messenger.registerOutgoingPluginChannel(p, "recipebookplus:server_handshake_response");
-        messenger.registerIncomingPluginChannel(p, "recipebookplus:get_config", Config::handleConfigRequest);
+        messenger.registerIncomingPluginChannel(p, "recipebookplus:get_config", ConfigClientSync::handleConfigRequest);
         messenger.registerIncomingPluginChannel(p, "recipebookplus:client_handshake_request", HandshakeHandler::onHandshake);
         LOGGER.info(MARKER, "Registered 6 messenger channels");
     }
@@ -66,7 +67,7 @@ public final class RecipeBookPlus extends JavaPlugin {
         messenger.unregisterOutgoingPluginChannel(p, "fabric:recipe_sync");
         messenger.unregisterOutgoingPluginChannel(p, "recipebookplus:config");
         messenger.unregisterOutgoingPluginChannel(p, "recipebookplus:server_handshake_response");
-        messenger.unregisterIncomingPluginChannel(p, "recipebookplus:get_config", Config::handleConfigRequest);
+        messenger.unregisterIncomingPluginChannel(p, "recipebookplus:get_config", ConfigClientSync::handleConfigRequest);
         messenger.unregisterIncomingPluginChannel(p, "recipebookplus:client_handshake_request", HandshakeHandler::onHandshake);
         LOGGER.info(MARKER, "Unregistered 6 messenger channels");
     }

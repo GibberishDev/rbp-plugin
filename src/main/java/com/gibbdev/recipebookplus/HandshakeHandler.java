@@ -1,6 +1,6 @@
 package com.gibbdev.recipebookplus;
 
-import com.gibbdev.recipebookplus.config.Config;
+import com.gibbdev.recipebookplus.config.ConfigClientSync;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -14,11 +14,12 @@ import net.minecraft.server.level.ServerPlayer;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.jspecify.annotations.NonNull;
+import org.slf4j.MarkerFactory;
 
 public class HandshakeHandler {
 
     public static void onHandshake(String ignoredChannel, Player player, byte[] ignoredData) {
-        RecipeBookPlus.LOGGER.info("Received handshake payload from: "+ player.identity().uuid());
+        RecipeBookPlus.LOGGER.info(MarkerFactory.getMarker("ClientHandshake"),"Received handshake payload from: {}({})", player.getName(),player.identity().uuid());
         ServerPlayer serverPlayer = ((CraftPlayer) player).getHandle();
         MinecraftServer server = serverPlayer.level().getServer();
         HandshakeResponsePayload pl = HandshakeResponsePayload.create();
@@ -27,7 +28,7 @@ public class HandshakeHandler {
         byte[] bytes = new byte[buffer.writerIndex()];
         buffer.getBytes(0, bytes);
         serverPlayer.connection.send(new ClientboundCustomPayloadPacket(new DiscardedPayload(Identifier.fromNamespaceAndPath("recipebookplus","server_handshake_response"), bytes)));
-        Config.sendConfigToPlayer(player);
+        ConfigClientSync.sendConfigToPlayer(player);
     }
 
     public record HandshakeResponsePayload(String version, String serverModType) implements CustomPacketPayload {

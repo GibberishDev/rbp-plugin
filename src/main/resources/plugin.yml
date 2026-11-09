@@ -13,10 +13,3 @@ permissions:
   recipebookplus:editconfig:
     description: Allows editing RecipeBook+ config in game via /rbpconfig command
     default: op
-    usage: "/rbpconfig <config_key> <new config value>"
-
-commands:
-  rbpconfig:
-    description: Edit RecipeBook+ config. Changing value or using /reload syncs config values with clients that have the Mod installed and performed a handshake
-    usage: "/rbpconfig <config_key> <new config value>"
-    permission: recipebookplus:editconfig

@@ -1,39 +1,33 @@
 package com.gibbdev.recipebookplus.commands;
 
+import com.gibbdev.recipebookplus.RecipeBookPlus;
 import com.gibbdev.recipebookplus.config.Config;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.TextColor;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.permissions.Permission;
 
-import java.util.List;
 import java.util.Locale;
 
 public class RBPConfigCommand{
 
-    private static final List<String> config_names = List.of(
-            "recipe_discovery",
-            "recipe_discovery_result",
-            "recipe_discovery_ingredient",
-            "recipe_discovery_criterions"
-    );
+    private static Component getAllConfigs() {
+        MutableComponent text = Component.literal("RecipeBook+ Config:");
+        Config.registeredConfigs.forEach((id, entry)->text.append(
+                Component.literal("\n"+id+": ").append(entry.getChatValue()).withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(entry.getDescription()))))
+        ));
+        return text;
+    }
 
     public static void register(CommandDispatcher dispatcher) {
         dispatcher.register(Commands.literal("rbpconfig")
                 .requires(src->src.getSender().hasPermission("recipebookplus:editconfig"))
                 .executes(ctx->{
                     ctx.getSource().sendSuccess(
-                            ()-> Component.literal("[RecipeBook+ config]")
-                                    .withColor(TextColor.AQUA)
-                                    .withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(
-                                                "recipe_discovery: "+ (Config.getRecipeDiscovery()?"§2TRUE§r":"§4FALSE§r") + "\n"+
-                                                    "recipe_discovery_result: "+ (Config.getRecipeDiscoveryResult()?"§2TRUE§r":"§4FALSE§r") + "\n"+
-                                                    "recipe_discovery_ingredient: "+ (Config.getRecipeDiscoveryIngredient()?"§2TRUE§r":"§4FALSE§r") + "\n"+
-                                                    "recipe_discovery_criterions: "+ (Config.getRecipeDiscoveryCriterions()?"§2TRUE§r":"§4FALSE§r") + "\n"
-                                    )))),
+                            RBPConfigCommand::getAllConfigs,
                             false
                     );
                     return 1;
@@ -41,103 +35,44 @@ public class RBPConfigCommand{
                 .then(
                         Commands.argument("config_name", StringArgumentType.word())
                         .suggests((_, builder) -> {
-                            for (String cfg_id : config_names){
-                                builder.suggest(cfg_id);
-                            }
+                            Config.registeredConfigs.keySet().forEach(builder::suggest);
                             return builder.buildFuture();
                         })
                         .executes( ctx -> {
-                            String config_name = StringArgumentType.getString(ctx, "config_name");
-                            if (config_names.contains(config_name)) {
-                                switch (config_name) {
-                                    case "recipe_discovery" : {
-                                        ctx.getSource().sendSuccess(
-                                                ()->Component.literal("recipe_discovery: "+ (Config.getRecipeDiscovery()?"§2TRUE§r":"§4FALSE§r")),
-                                                false
-                                        );
-                                        return 1;
-                                    }
-                                    case "recipe_discovery_result" : {
-                                        ctx.getSource().sendSuccess(
-                                                ()->Component.literal("recipe_discovery_result: "+ (Config.getRecipeDiscoveryResult()?"§2TRUE§r":"§4FALSE§r")),
-                                                false
-                                        );
-                                        return 1;
-                                    }
-                                    case "recipe_discovery_ingredient" : {
-                                        ctx.getSource().sendSuccess(
-                                                ()->Component.literal("recipe_discovery_ingredient: "+ (Config.getRecipeDiscoveryIngredient()?"§2TRUE§r":"§4FALSE§r")),
-                                                false
-                                        );
-                                        return 1;
-                                    }
-                                    case "recipe_discovery_criterions" : {
-                                        ctx.getSource().sendSuccess(
-                                                ()->Component.literal("recipe_discovery_criterions: "+ (Config.getRecipeDiscoveryCriterions()?"§2TRUE§r":"§4FALSE§r")),
-                                                false
-                                        );
-                                        return 1;
-                                    }
-                                }
+                            String config_name = StringArgumentType.getString(ctx, "config_name").toLowerCase(Locale.ROOT);
+                            if (Config.registeredConfigs.containsKey(config_name)) {
+                                ctx.getSource().sendSuccess(
+                                        ()->Component.literal(config_name+": ").append(Config.registeredConfigs.get(config_name).getChatValue()),
+                                        false
+                                );
+                                return 1;
                             } else {
                                 ctx.getSource().sendFailure(
-                                        Component.literal("Invalid config key: \""+config_name+"\"\nValid entries are:\nrecipe_discovery, recipe_discovery_result, recipe_discovery_ingredient, recipe_discovery_criterions")
+                                        Component.translatable("Invalid config key: \"%s\"", config_name)
                                 );
                                 return 0;
                             }
-                            return 1;
                         })
                         .then(
                                 Commands.argument("config_value", StringArgumentType.word())
-                                .suggests((_, builder) -> {
-                                    builder.suggest("true");
-                                    builder.suggest("false");
+                                .suggests((ctx, builder) -> {
+                                    String config_name = StringArgumentType.getString(ctx, "config_name").toLowerCase(Locale.ROOT);
+                                    for (String value : Config.registeredConfigs.get(config_name).getValues()) builder.suggest(value);
                                     return builder.buildFuture();
                                 })
                                 .executes( ctx -> {
-                                        String config_value = StringArgumentType.getString(ctx, "config_value");
                                         String config_name = StringArgumentType.getString(ctx, "config_name");
-                                        if (!true_strings.contains(config_value.toLowerCase(Locale.ROOT)) && !false_strings.contains(config_value.toLowerCase(Locale.ROOT))) {
-                                            ctx.getSource().sendFailure(
-                                                    Component.literal("Invalid config value: \""+config_value+"\"\nValid entries are:\ntrue, false")
+                                        String config_value = StringArgumentType.getString(ctx, "config_value");
+                                        Config.ConfigSetResponse resp = Config.setConfigValue(config_name, config_value);
+                                        if (resp.success) {
+                                            ctx.getSource().sendSuccess(
+                                                    ()->resp.message,
+                                                    false
                                             );
-                                            return 0;
+                                            return 1;
                                         } else {
-                                            return switch (config_name) {
-                                                case "recipe_discovery" -> {
-                                                    Config.setRecipeDiscovery(true_strings.contains(config_value.toLowerCase(Locale.ROOT)));
-                                                    ctx.getSource().sendSuccess(
-                                                            () -> Component.literal("recipe_discovery is now: " + (Config.getRecipeDiscovery() ? "§2TRUE§r" : "§4FALSE§r")),
-                                                            false
-                                                    );
-                                                    yield 1;
-                                                }
-                                                case "recipe_discovery_result" -> {
-                                                    Config.setRecipeDiscoveryResult(true_strings.contains(config_value.toLowerCase(Locale.ROOT)));
-                                                    ctx.getSource().sendSuccess(
-                                                            () -> Component.literal("recipe_discovery_result is now: " + (Config.getRecipeDiscoveryResult() ? "§2TRUE§r" : "§4FALSE§r")),
-                                                            false
-                                                    );
-                                                    yield 1;
-                                                }
-                                                case "recipe_discovery_ingredient" -> {
-                                                    Config.setRecipeDiscoveryIngredient(true_strings.contains(config_value.toLowerCase(Locale.ROOT)));
-                                                    ctx.getSource().sendSuccess(
-                                                            () -> Component.literal("recipe_discovery_ingredient is now: " + (Config.getRecipeDiscoveryIngredient() ? "§2TRUE§r" : "§4FALSE§r")),
-                                                            false
-                                                    );
-                                                    yield 1;
-                                                }
-                                                case "recipe_discovery_criterions" -> {
-                                                    Config.setRecipeDiscoveryCriterions(true_strings.contains(config_value.toLowerCase(Locale.ROOT)));
-                                                    ctx.getSource().sendSuccess(
-                                                            () -> Component.literal("recipe_discovery_criterions is now: " + (Config.getRecipeDiscoveryCriterions() ? "§2TRUE§r" : "§4FALSE§r")),
-                                                            false
-                                                    );
-                                                    yield 1;
-                                                }
-                                                default -> 1;
-                                            };
+                                            ctx.getSource().sendFailure(resp.message);
+                                            return 0;
                                         }
                                 })
                         )
