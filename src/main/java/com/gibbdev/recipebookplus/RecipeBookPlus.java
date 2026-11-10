@@ -3,6 +3,7 @@ package com.gibbdev.recipebookplus;
 import com.gibbdev.recipebookplus.commands.RBPConfigCommand;
 import com.gibbdev.recipebookplus.config.Config;
 import com.gibbdev.recipebookplus.config.ConfigClientSync;
+import com.gibbdev.recipebookplus.recipe.RecipeDiscovery;
 import com.gibbdev.recipebookplus.recipe.sync.RecipeSync;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import net.minecraft.server.MinecraftServer;
@@ -29,9 +30,17 @@ public final class RecipeBookPlus extends JavaPlugin {
         Plugin = this;
         getServer().getPluginManager().registerEvents(new RecipeSync(), this);
         getServer().getPluginManager().registerEvents(new ConfigClientSync(), this);
+        getServer().getPluginManager().registerEvents(new RecipeDiscovery(), this);
         Config.registerConfigEntries();
         registerCommands();
         registerNetworking();
+        getServer().getScheduler().runTaskTimerAsynchronously(
+                this,
+                RecipeDiscovery::saveData,
+                6000L,
+                6000L
+        );
+        RecipeDiscovery.rebuildRecipeLookupMaps();
     }
 
     @Override
@@ -40,9 +49,7 @@ public final class RecipeBookPlus extends JavaPlugin {
     }
 
     private static void registerCommands() {
-        Plugin.getLifecycleManager().registerEventHandler( LifecycleEvents.COMMANDS, event -> {
-                RBPConfigCommand.register(event.registrar().getDispatcher());
-        });
+        Plugin.getLifecycleManager().registerEventHandler( LifecycleEvents.COMMANDS, event -> RBPConfigCommand.register(event.registrar().getDispatcher()));
         LOGGER.info(MARKER, "Registered 1 commands");
     }
 

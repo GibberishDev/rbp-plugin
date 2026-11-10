@@ -1,6 +1,5 @@
 package com.gibbdev.recipebookplus.commands;
 
-import com.gibbdev.recipebookplus.RecipeBookPlus;
 import com.gibbdev.recipebookplus.config.Config;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -8,7 +7,6 @@ import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.server.permissions.Permission;
 
 import java.util.Locale;
 
@@ -22,6 +20,7 @@ public class RBPConfigCommand{
         return text;
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     public static void register(CommandDispatcher dispatcher) {
         dispatcher.register(Commands.literal("rbpconfig")
                 .requires(src->src.getSender().hasPermission("recipebookplus:editconfig"))
@@ -57,13 +56,13 @@ public class RBPConfigCommand{
                                 Commands.argument("config_value", StringArgumentType.word())
                                 .suggests((ctx, builder) -> {
                                     String config_name = StringArgumentType.getString(ctx, "config_name").toLowerCase(Locale.ROOT);
-                                    for (String value : Config.registeredConfigs.get(config_name).getValues()) builder.suggest(value);
+                                    for (String value : Config.registeredConfigs.get(config_name).getChatValues()) builder.suggest(value);
                                     return builder.buildFuture();
                                 })
                                 .executes( ctx -> {
                                         String config_name = StringArgumentType.getString(ctx, "config_name");
                                         String config_value = StringArgumentType.getString(ctx, "config_value");
-                                        Config.ConfigSetResponse resp = Config.setConfigValue(config_name, config_value);
+                                        Config.ConfigSetResponse resp = Config.registeredConfigs.get(config_name).setString(config_value);
                                         if (resp.success) {
                                             ctx.getSource().sendSuccess(
                                                     ()->resp.message,

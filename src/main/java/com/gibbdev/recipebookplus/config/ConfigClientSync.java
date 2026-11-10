@@ -74,7 +74,9 @@ public class ConfigClientSync implements Listener {
     public static JsonObject getConfigJSON() {
         JsonObject json = new JsonObject();
         registeredConfigs.forEach((id, entry)-> {
-            json.addProperty(id, entry.get());
+            if (entry.doSync) {
+                json.addProperty(id, entry.getString());
+            }
         });
 
         return json;
