@@ -42,12 +42,13 @@ public class Config {
             this.description = description;
             this.value = defaultValue;
         }
-
         public void register() {
             registeredConfigs.put(this.id, this);
-            this.setString(RecipeBookPlus.Plugin.getConfig().getString(this.id));
+            this.setString(RecipeBookPlus.PLUGIN.getConfig().getString(this.id, this.defaultValue.toString()));
         }
-
+        public boolean doSync(){
+            return doSync;
+        }
     }
 
     public interface IConfigEntry<T> {
@@ -75,8 +76,8 @@ public class Config {
         public ConfigSetResponse set(Boolean newValue) {
             if (this.value == newValue) return new ConfigSetResponse(true,Component.empty());
             this.value = newValue;
-            RecipeBookPlus.Plugin.getConfig().set(id, newValue);
-            RecipeBookPlus.Plugin.saveConfig();
+            RecipeBookPlus.PLUGIN.getConfig().set(id, newValue);
+            RecipeBookPlus.PLUGIN.saveConfig();
             return new ConfigSetResponse(true,Component.empty());
 
         }
@@ -93,20 +94,20 @@ public class Config {
                 RecipeBookPlus.LOGGER.error(MARKER, "Could not set \"{}\" for \"{}\". For this config entry valid values are: {}", lcValue, this.id, this.values.toString());
                 return new ConfigSetResponse(false, Component.translatable("Could not set new value for \"%s\". For this config entry valid values are: %s", this.id, this.values.toString()).withColor(TextColor.RED));
             }
-            if (this.value == newBool) return new ConfigSetResponse(true,Component.empty());
+            RecipeBookPlus.PLUGIN.getConfig().set(id, newBool);
+            RecipeBookPlus.PLUGIN.saveConfig();
+            if (this.value == newBool) return new ConfigSetResponse(true,Component.translatable("Value was already %s", this.value.toString()));
             this.value = newBool;
-            RecipeBookPlus.Plugin.getConfig().set(id, this.value);
-            RecipeBookPlus.Plugin.saveConfig();
             return new ConfigSetResponse(true, Component.translatable("Successfully changed value of \"%s\" to \"%s\"", this.id, this.value));
         }
 
         @Override
         public Boolean get() {
-            return RecipeBookPlus.Plugin.getConfig().getBoolean(this.id);
+            return RecipeBookPlus.PLUGIN.getConfig().getBoolean(this.id);
         }
 
         public boolean getBoolean() {
-            return RecipeBookPlus.Plugin.getConfig().getBoolean(this.id);
+            return this.value;
         }
 
         @Override
@@ -162,15 +163,29 @@ public class Config {
             true,
             "Recipe discovered and added to player knowledge book when certain criteria met. (VANILLA WAY)\n(Ex: advancement system based recipe discovery. Good example would be learning all boat recipes when touching water)"
     );
+    public static final BooleanConfigEntry SAVE_DATA_FOR_ALL_PLAYERS = new BooleanConfigEntry (
+            "save_data_for_all_players",
+            true,
+            false,
+            "Whether to save recipe discovery data for all players or only for those who have the mod installed on the client side"
+    );
+    public static final BooleanConfigEntry VERBOSE_LOGGING = new BooleanConfigEntry (
+            "verbose_logging",
+            false,
+            false,
+            "Whether to log actions plugin is doing"
+    );
 
 
     public static void registerConfigEntries() {
-        RecipeBookPlus.Plugin.reloadConfig();
+        RecipeBookPlus.PLUGIN.reloadConfig();
+        VERBOSE_LOGGING.register();
         RECIPE_DISCOVERY.register();
         RECIPE_DISCOVERY_RESULT.register();
         RECIPE_DISCOVERY_INGREDIENT.register();
         RECIPE_DISCOVERY_CRITERIONS.register();
-        RecipeBookPlus.Plugin.saveConfig();
+        SAVE_DATA_FOR_ALL_PLAYERS.register();
+        RecipeBookPlus.PLUGIN.saveConfig();
     }
 
     //endregion
