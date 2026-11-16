@@ -1,7 +1,7 @@
 name: recipebookplus
 description: $description
 prefix: recipebookplus
-version: '0.0.1'
+version: '26.3-1.0.0'
 
 main: com.gibbdev.recipebookplus.RecipeBookPlus
 api-version: '26.3'
